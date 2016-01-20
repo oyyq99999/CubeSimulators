@@ -24,7 +24,7 @@ public class Main {
         CubeNNNRenderer renderer = new CubeNNNRenderer(3);
         canvas.addGLEventListener(renderer);
 
-        FPSAnimator animator = new FPSAnimator(canvas, 80, false);
+        FPSAnimator animator = new FPSAnimator(canvas, 80, true);
         animator.start();
 
         CubeNNNController controller = new CubeNNNController(renderer, animator);
