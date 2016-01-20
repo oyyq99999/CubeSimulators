@@ -1,0 +1,9 @@
+/*
+!/.project
+!/.classpath
+!/.gitignore
+!/src
+!/lib
+.DS_Store
+/lib/*.zip
+!/*.md
