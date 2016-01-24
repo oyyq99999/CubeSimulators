@@ -3,15 +3,22 @@ package oyyq.cube.simulator.cube;
 import static com.jogamp.opengl.GL2.*;
 import static oyyq.cube.simulator.cube.CubeNNN.*;
 
+import java.awt.Font;
+
 import com.jogamp.opengl.GL2;
 import com.jogamp.opengl.GLAutoDrawable;
 import com.jogamp.opengl.GLEventListener;
 import com.jogamp.opengl.glu.GLU;
-import com.jogamp.opengl.util.gl2.GLUT;
+import com.jogamp.opengl.util.awt.TextRenderer;
 
 import oyyq.cube.simulator.cube.CubeNNN.Cubie;
+import oyyq.cube.util.CubeTimer;
 
 public class CubeNNNRenderer implements GLEventListener {
+
+    public static enum SolvingState {
+        INITIALIZED, SCRAMBLED, SOLVING, DNF, SOLVED, MESSED_BY_USER
+    }
 
     private static final float ZERO_F       = 0.0f;
     private static final float ONE_F        = 1.0f;
@@ -25,7 +32,6 @@ public class CubeNNNRenderer implements GLEventListener {
     private static final int   TURN_ANGLE   = 90;
 
     private GLU                glu          = new GLU();
-    private GLUT               glut         = new GLUT();
     CubeNNN                    cube;
     private int                cubeSize;
     private int[]              columnAnglesX;
@@ -36,6 +42,9 @@ public class CubeNNNRenderer implements GLEventListener {
     private int[]              angleZGoals;
     private float[][]          colors       = {{1, 1, 1, 1}, {1, 0, 0, 1}, {0, 1, 0, 1},
             {1, 1, 0, 1}, {1, 0.5f, 0, 1}, {0, 0, 1, 1}, {0, 0, 0, 0}};
+    CubeTimer                  timer;
+    private TextRenderer       tr;
+    SolvingState               state        = SolvingState.INITIALIZED;
 
     public CubeNNNRenderer(int size) {
         setCubeSize(size);
@@ -50,6 +59,7 @@ public class CubeNNNRenderer implements GLEventListener {
         angleXGoals = new int[size];
         angleYGoals = new int[size];
         angleZGoals = new int[size];
+        timer = new CubeTimer();
     }
 
     int getCubeSize() {
@@ -63,6 +73,7 @@ public class CubeNNNRenderer implements GLEventListener {
         gl.glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
         gl.glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
         gl.glShadeModel(GL_SMOOTH);
+        tr = new TextRenderer(new Font("SansSerif", Font.BOLD, 60));
     }
 
     @Override
@@ -76,14 +87,22 @@ public class CubeNNNRenderer implements GLEventListener {
         gl.glLoadIdentity();
         glu.gluLookAt(0, cubeSize * 4, cubeSize * 4, 0, 0, 0, 0, 1, 0);
         if (cube.isSolvedByUser()) {
-            gl.glPushMatrix();
-            gl.glColor3f(0, 1, 0);
-            gl.glRasterPos2d(-cubeSize / 5.0, cubeSize * 2);
-            glut.glutBitmapString(GLUT.BITMAP_TIMES_ROMAN_24, "Cube solved!");
-            gl.glPopMatrix();
+            timer.stop();
+            state = SolvingState.SOLVED;
         }
+        drawText(drawable);
         updateAngles();
         drawCube(gl);
+    }
+
+    private void drawText(GLAutoDrawable drawable) {
+        int width = drawable.getSurfaceWidth();
+        int height = drawable.getSurfaceHeight();
+        String text = (cube.isSolvedByUser() ? "Solve Time: " : "") + timer.getTime();
+        tr.beginRendering(width, height);
+        tr.setColor(0, 1, 0, 1);
+        tr.draw(text, (int) ((width - tr.getBounds(text).getWidth()) / 2), height * 8 / 9);
+        tr.endRendering();
     }
 
     private void updateAngles() {
@@ -102,7 +121,7 @@ public class CubeNNNRenderer implements GLEventListener {
                         }
                         angleXGoals[i] %= 360;
                         int turns = angleXGoals[i] / TURN_ANGLE;
-                        cube.rotateX(i, 4 - turns);
+                        cube.moveX(i, 4 - turns);
                         angleXGoals[i] = 0;
                         columnAnglesX[i] = 0;
                     }
@@ -123,7 +142,7 @@ public class CubeNNNRenderer implements GLEventListener {
                         }
                         angleYGoals[i] %= 360;
                         int turns = angleYGoals[i] / TURN_ANGLE;
-                        cube.rotateY(i, 4 - turns);
+                        cube.moveY(i, 4 - turns);
                         angleYGoals[i] = 0;
                         rowAnglesY[i] = 0;
                     }
@@ -144,7 +163,7 @@ public class CubeNNNRenderer implements GLEventListener {
                         }
                         angleZGoals[i] %= 360;
                         int turns = angleZGoals[i] / TURN_ANGLE;
-                        cube.rotateZ(i, 4 - turns);
+                        cube.moveZ(i, 4 - turns);
                         angleZGoals[i] = 0;
                         faceAnglesZ[i] = 0;
                     }

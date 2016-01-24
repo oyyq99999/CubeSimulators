@@ -11,21 +11,21 @@ import java.util.Queue;
 
 import com.jogamp.opengl.util.FPSAnimator;
 
+import oyyq.cube.simulator.cube.CubeNNNRenderer.SolvingState;
+import oyyq.cube.util.CubeTimer;
+
 public class CubeNNNController extends Thread implements KeyListener {
 
-    public static final int     MAX_CUBE_SIZE = 27;
-    public static final int     MIN_CUBE_SIZE = 2;
-
-    private static final String X_MOVES       = "bdeikmnrtuvy";
-    private static final String Y_MOVES       = "acfjlsx;,.";
-    private static final String Z_MOVES       = "ghopqw";
+    private static final String X_MOVES      = "bdeikmnrtuvy";
+    private static final String Y_MOVES      = "acfjlsx;,.";
+    private static final String Z_MOVES      = "ghopqw";
 
     private CubeNNNRenderer     renderer;
     private FPSAnimator         animator;
-    private Queue<Character>    controlCodes  = new LinkedList<>();
+    private Queue<Character>    controlCodes = new LinkedList<>();
     private int                 cubeSize;
-    private int                 shiftRight    = 1;
-    private int                 shiftLeft     = 1;
+    private int                 shiftRight   = 1;
+    private int                 shiftLeft    = 1;
 
     public CubeNNNController(CubeNNNRenderer renderer, FPSAnimator animator) {
         setRenderer(renderer);
@@ -41,35 +41,23 @@ public class CubeNNNController extends Thread implements KeyListener {
         this.animator = animator;
     }
 
-    private void increaseShiftRight() {
-        shiftRight++;
-        if (shiftRight > cubeSize) {
-            shiftRight = cubeSize;
-        }
-    }
-
-    private void decreaseShiftRight() {
-        shiftRight--;
-        if (shiftRight <= 0) {
-            shiftRight = 1;
-        }
-    }
-
-    private void increaseShiftLeft() {
-        shiftLeft++;
-        if (shiftLeft > cubeSize) {
-            shiftLeft = cubeSize;
-        }
-    }
-
     private void resetShifts() {
         shiftLeft = shiftRight = 1;
     }
 
-    private void decreaseShiftLeft() {
-        shiftLeft--;
-        if (shiftLeft <= 0) {
-            shiftLeft = 1;
+    private void alterShift(int amount, boolean left) {
+        int shift = left ? shiftLeft : shiftRight;
+        shift += amount;
+        if (shift <= 0) {
+            shift = 1;
+        }
+        if (shift >= cubeSize) {
+            shift = cubeSize - 1;
+        }
+        if (left) {
+            shiftLeft = shift;
+        } else {
+            shiftRight = shift;
         }
     }
 
@@ -86,6 +74,20 @@ public class CubeNNNController extends Thread implements KeyListener {
             }
             char nextMove = controlCodes.peek();
             int axis = getAxis(nextMove);
+            if (axis != -1 && "qtypa;bn".indexOf(nextMove) < 0) {
+                if (renderer.state == SolvingState.SOLVED || renderer.state == SolvingState.DNF) {
+                    controlCodes.poll();
+                    continue;
+                }
+                if (renderer.state == SolvingState.SCRAMBLED) {
+                    if (renderer.timer.getState() == CubeTimer.State.DNF) {
+                        renderer.state = SolvingState.DNF;
+                        continue;
+                    }
+                    renderer.timer.start();
+                    renderer.state = SolvingState.SOLVING;
+                }
+            }
             int currentAxis = renderer.getAnimatingAxis();
             if (axis != -1 && axis != currentAxis && currentAxis != -1) {
                 continue;
@@ -205,45 +207,53 @@ public class CubeNNNController extends Thread implements KeyListener {
                     }
                     break;
                 case '3':
-                    decreaseShiftLeft();
+                    alterShift(-1, true);
                     break;
                 case '4':
-                    increaseShiftLeft();
+                    alterShift(1, true);
                     break;
                 case '7':
-                    increaseShiftRight();
+                    alterShift(1, false);
                     break;
                 case '8':
-                    decreaseShiftRight();
+                    alterShift(-1, false);
                     break;
                 case 0x1B:
-                    renderer.cube.reset();
-                    resetShifts();
+                    if (renderer.timer.isRunning()) {
+                        renderer.timer.setDNF();
+                        renderer.state = SolvingState.DNF;
+                    } else {
+                        renderer.cube.reset();
+                        resetShifts();
+                        renderer.timer = new CubeTimer();
+                        renderer.state = SolvingState.INITIALIZED;
+                    }
                     break;
                 case ' ':
                     if (renderer.cube.isSolved()) {
                         renderer.cube.scramble();
+                        renderer.timer.startInspection();
+                        renderer.state = SolvingState.SCRAMBLED;
                     }
                     resetShifts();
                     break;
                 case '+':
                 case '=':
-                    if (++cubeSize > MAX_CUBE_SIZE) {
-                        cubeSize = MAX_CUBE_SIZE;
-                        break;
+                    if (cubeSize < CubeNNN.MAX_CUBE_SIZE) {
+                        animator.pause();
+                        renderer.setCubeSize(++cubeSize);
+                        animator.resume();
+                        renderer.state = SolvingState.INITIALIZED;
                     }
-                    animator.pause();
-                    renderer.setCubeSize(cubeSize);
-                    animator.resume();
                     break;
                 case '-':
-                    if (--cubeSize < MIN_CUBE_SIZE) {
-                        cubeSize = MIN_CUBE_SIZE;
-                        break;
+                    if (cubeSize > CubeNNN.MIN_CUBE_SIZE) {
+                        animator.pause();
+                        renderer.setCubeSize(--cubeSize);
+                        animator.resume();
+                        renderer.state = SolvingState.INITIALIZED;
                     }
-                    animator.pause();
-                    renderer.setCubeSize(cubeSize);
-                    animator.resume();
+                    break;
                 default:
             }
         }

@@ -2,27 +2,33 @@ package oyyq.cube.simulator.cube;
 
 import static oyyq.cube.simulator.util.Util.*;
 import java.util.Arrays;
-import java.util.Random;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import oyyq.cube.util.CubeNNNScrambler;
 
 public class CubeNNN {
 
+    public static final int MIN_CUBE_SIZE = 2;
+    public static final int MAX_CUBE_SIZE = 27;
+
     // faces and colors
-    public static final int U                = 0;
-    public static final int R                = 1;
-    public static final int F                = 2;
-    public static final int D                = 3;
-    public static final int L                = 4;
-    public static final int B                = 5;
-    public static final int NONE             = 6;
+    public static final int U             = 0;
+    public static final int R             = 1;
+    public static final int F             = 2;
+    public static final int D             = 3;
+    public static final int L             = 4;
+    public static final int B             = 5;
+    public static final int NONE          = 6;
 
     // axes
-    public static final int X                = 0;
-    public static final int Y                = 1;
-    public static final int Z                = 2;
+    public static final int X             = 0;
+    public static final int Y             = 1;
+    public static final int Z             = 2;
 
     private Cubie[][][]     cubies;
     private int             size;
-    private boolean         hasBeenScrambled = false;
+    private boolean         scrambled     = false;
 
     public CubeNNN() {
         this(3);
@@ -35,7 +41,7 @@ public class CubeNNN {
     }
 
     public void reset() {
-        hasBeenScrambled = false;
+        scrambled = false;
         for (int x = 0; x < size; x++) {
             for (int y = 0; y < size; y++) {
                 for (int z = 0; z < size; z++) {
@@ -71,38 +77,32 @@ public class CubeNNN {
     }
 
     public void scramble() {
-        Random r = new Random();
-        int n = 1000;
-        for (int i = 0; i < n; i++) {
-            int axis = r.nextInt(6);
-            int shift = r.nextInt(size >> 1) + 1;
-            int amount = r.nextInt(4);
-            switch (axis) {
-                case U:
-                    rotateU(shift, amount);
-                    break;
-                case R:
-                    rotateR(shift, amount);
-                    break;
-                case F:
-                    rotateF(shift, amount);
-                    break;
-                case D:
-                    rotateD(shift, amount);
-                    break;
-                case L:
-                    rotateL(shift, amount);
-                    break;
-                case B:
-                    rotateB(shift, amount);
-                    break;
+        reset();
+        applyMoveSequence(CubeNNNScrambler.scramble(size));
+        scrambled = true;
+    }
+
+    private void applyMoveSequence(String sequence) {
+        String[] moves = sequence.split("\\s+");
+        Pattern p = Pattern.compile("(\\d*)([URFDLB])(w?)[2']?");
+        for (String move : moves) {
+            Matcher m = p.matcher(move);
+            if (!m.matches()) {
+                continue;
             }
+            int axis = "URFDLB".indexOf(m.group(2));
+            if (axis < 0) {
+                continue;
+            }
+            int shift = m.group(1).length() > 0 ? Integer.parseInt(m.group(1))
+                    : (m.group(3).length() > 0 ? 2 : 1);
+            int amount = move.endsWith("'") ? 3 : (move.endsWith("2") ? 2 : 1);
+            move(axis, shift, amount);
         }
-        hasBeenScrambled = true;
     }
 
     public boolean isSolvedByUser() {
-        if (!hasBeenScrambled) {
+        if (!scrambled) {
             return false;
         }
         return isSolved();
@@ -164,49 +164,49 @@ public class CubeNNN {
         return cubies[x][y][z];
     }
 
-    public void rotateR(int shift, int amount) {
+    public void moveR(int shift, int amount) {
         for (int i = size - 1; shift-- > 0; i--) {
-            rotateX(i, amount);
+            moveX(i, amount);
         }
     }
 
-    public void rotateU(int shift, int amount) {
+    public void moveU(int shift, int amount) {
         for (int i = size - 1; shift-- > 0; i--) {
-            rotateY(i, amount);
+            moveY(i, amount);
         }
     }
 
-    public void rotateF(int shift, int amount) {
+    public void moveF(int shift, int amount) {
         for (int i = size - 1; shift-- > 0; i--) {
-            rotateZ(i, amount);
+            moveZ(i, amount);
         }
     }
 
-    public void rotateL(int shift, int amount) {
+    public void moveL(int shift, int amount) {
         for (int i = 0; i < shift; i++) {
-            rotateX(i, 4 - amount);
+            moveX(i, 4 - amount);
         }
     }
 
-    public void rotateD(int shift, int amount) {
+    public void moveD(int shift, int amount) {
         for (int i = 0; i < shift; i++) {
-            rotateY(i, 4 - amount);
+            moveY(i, 4 - amount);
         }
     }
 
-    public void rotateB(int shift, int amount) {
+    public void moveB(int shift, int amount) {
         for (int i = 0; i < shift; i++) {
-            rotateZ(i, 4 - amount);
+            moveZ(i, 4 - amount);
         }
     }
 
-    public void rotateX(int amount) {
+    public void moveX(int amount) {
         for (int i = 0; i < size; i++) {
-            rotateX(i, amount);
+            moveX(i, amount);
         }
     }
 
-    public void rotateX(int slice, int amount) {
+    public void moveX(int slice, int amount) {
         if (amount < 0) {
             amount = 4 - ((-amount) & 3);
         }
@@ -237,13 +237,13 @@ public class CubeNNN {
 
     }
 
-    public void rotateY(int amount) {
+    public void moveY(int amount) {
         for (int i = 0; i < size; i++) {
-            rotateY(i, amount);
+            moveY(i, amount);
         }
     }
 
-    public void rotateY(int slice, int amount) {
+    public void moveY(int slice, int amount) {
         if (amount < 0) {
             amount = 4 - ((-amount) & 3);
         }
@@ -274,13 +274,13 @@ public class CubeNNN {
 
     }
 
-    public void rotateZ(int amount) {
+    public void moveZ(int amount) {
         for (int i = 0; i < size; i++) {
-            rotateZ(i, amount);
+            moveZ(i, amount);
         }
     }
 
-    public void rotateZ(int slice, int amount) {
+    public void moveZ(int slice, int amount) {
         if (amount < 0) {
             amount = 4 - ((-amount) & 3);
         }
@@ -308,7 +308,29 @@ public class CubeNNN {
                 }
             }
         }
+    }
 
+    public void move(int axis, int shift, int amount) {
+        switch (axis) {
+            case U:
+                moveU(shift, amount);
+                break;
+            case R:
+                moveR(shift, amount);
+                break;
+            case F:
+                moveF(shift, amount);
+                break;
+            case D:
+                moveD(shift, amount);
+                break;
+            case L:
+                moveL(shift, amount);
+                break;
+            case B:
+                moveB(shift, amount);
+                break;
+        }
     }
 
     public static class Cubie {
