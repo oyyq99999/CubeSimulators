@@ -4,6 +4,7 @@
 !/.gitignore
 !/src
 !/lib
+!/res
 .DS_Store
 /lib/*.zip
 !/*.md

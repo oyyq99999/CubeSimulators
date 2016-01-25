@@ -4,6 +4,11 @@ import static oyyq.cube.simulator.cube.CubeNNN.X;
 import static oyyq.cube.simulator.cube.CubeNNN.Y;
 import static oyyq.cube.simulator.cube.CubeNNN.Z;
 
+import java.awt.CheckboxMenuItem;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.ItemEvent;
+import java.awt.event.ItemListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.util.LinkedList;
@@ -12,9 +17,12 @@ import java.util.Queue;
 import com.jogamp.opengl.util.FPSAnimator;
 
 import oyyq.cube.simulator.cube.CubeNNNRenderer.SolvingState;
+import oyyq.cube.simulator.events.CommonDataListener;
+import oyyq.cube.simulator.model.CommonData;
 import oyyq.cube.util.CubeTimer;
 
-public class CubeNNNController extends Thread implements KeyListener {
+public class CubeNNNController extends Thread
+        implements KeyListener, CommonDataListener, ActionListener, ItemListener {
 
     private static final String X_MOVES      = "bdeikmnrtuvy";
     private static final String Y_MOVES      = "acfjlsx;,.";
@@ -23,18 +31,17 @@ public class CubeNNNController extends Thread implements KeyListener {
     private CubeNNNRenderer     renderer;
     private FPSAnimator         animator;
     private Queue<Character>    controlCodes = new LinkedList<>();
-    private int                 cubeSize;
     private int                 shiftRight   = 1;
     private int                 shiftLeft    = 1;
 
     public CubeNNNController(CubeNNNRenderer renderer, FPSAnimator animator) {
         setRenderer(renderer);
         setAnimator(animator);
+        CommonData.addListener(this);
     }
 
     public void setRenderer(CubeNNNRenderer renderer) {
         this.renderer = renderer;
-        cubeSize = renderer.getCubeSize();
     }
 
     public void setAnimator(FPSAnimator animator) {
@@ -46,6 +53,7 @@ public class CubeNNNController extends Thread implements KeyListener {
     }
 
     private void alterShift(int amount, boolean left) {
+        int cubeSize = CommonData.getCubeSize();
         int shift = left ? shiftLeft : shiftRight;
         shift += amount;
         if (shift <= 0) {
@@ -80,11 +88,11 @@ public class CubeNNNController extends Thread implements KeyListener {
                     continue;
                 }
                 if (renderer.state == SolvingState.SCRAMBLED) {
-                    if (renderer.timer.getState() == CubeTimer.State.DNF) {
+                    if (CommonData.getTimerState() == CubeTimer.State.DNF) {
                         renderer.state = SolvingState.DNF;
                         continue;
                     }
-                    renderer.timer.start();
+                    CommonData.startTimer();
                     renderer.state = SolvingState.SOLVING;
                 }
             }
@@ -93,6 +101,7 @@ public class CubeNNNController extends Thread implements KeyListener {
                 continue;
             }
             controlCodes.poll();
+            int cubeSize = CommonData.getCubeSize();
             switch (nextMove) {
                 case 'i': // R
                     for (int i = 0; i < shiftRight; i++) {
@@ -219,44 +228,40 @@ public class CubeNNNController extends Thread implements KeyListener {
                     alterShift(-1, false);
                     break;
                 case 0x1B:
-                    if (renderer.timer.isRunning()) {
-                        renderer.timer.setDNF();
+                    if (CommonData.timerIsRunning()) {
+                        CommonData.setDNF();
                         renderer.state = SolvingState.DNF;
                     } else {
                         renderer.cube.reset();
                         resetShifts();
-                        renderer.timer = new CubeTimer();
+                        CommonData.resetTimer();
                         renderer.state = SolvingState.INITIALIZED;
                     }
                     break;
                 case ' ':
                     if (renderer.cube.isSolved()) {
+                        CommonData.resetTimer();
                         renderer.cube.scramble();
-                        renderer.timer.startInspection();
+                        boolean blindfolded = CommonData.isBlindfolded();
+                        if (blindfolded) {
+                            CommonData.startInspection(true);
+                        } else {
+                            CommonData.startInspection(false);
+                        }
                         renderer.state = SolvingState.SCRAMBLED;
                     }
                     resetShifts();
                     break;
-                case '+':
-                case '=':
-                    if (cubeSize < CubeNNN.MAX_CUBE_SIZE) {
-                        animator.pause();
-                        renderer.setCubeSize(++cubeSize);
-                        animator.resume();
-                        renderer.state = SolvingState.INITIALIZED;
-                    }
-                    break;
-                case '-':
-                    if (cubeSize > CubeNNN.MIN_CUBE_SIZE) {
-                        animator.pause();
-                        renderer.setCubeSize(--cubeSize);
-                        animator.resume();
-                        renderer.state = SolvingState.INITIALIZED;
-                    }
-                    break;
                 default:
             }
         }
+    }
+
+    private void setCubeSize(int cubeSize) {
+        animator.pause();
+        renderer.setCubeSize(cubeSize);
+        renderer.state = SolvingState.INITIALIZED;
+        animator.resume();
     }
 
     private int getAxis(char move) {
@@ -282,5 +287,35 @@ public class CubeNNNController extends Thread implements KeyListener {
 
     @Override
     public void keyReleased(KeyEvent e) {}
+
+    @Override
+    public void commonDataChanged(int dataId) {
+        if (dataId == CommonData.DATA_ID_CUBE_SIZE) {
+            setCubeSize(CommonData.getCubeSize());
+        }
+    }
+
+    @Override
+    public void actionPerformed(ActionEvent e) {
+        if (e.getActionCommand().startsWith("setCubeSize")) {
+            int size = Integer.parseInt(e.getActionCommand().substring(11));
+            CommonData.setCubeSize(size);
+        } else if ("IncreaseCubeSize".equals(e.getActionCommand())) {
+            CommonData.setCubeSize(CommonData.getCubeSize() + 1);
+        } else if ("DecreaseCubeSize".equals(e.getActionCommand())) {
+            CommonData.setCubeSize(CommonData.getCubeSize() - 1);
+        }
+    }
+
+    @Override
+    public void itemStateChanged(ItemEvent e) {
+        Object obj = e.getSource();
+        if (obj instanceof CheckboxMenuItem) {
+            CheckboxMenuItem cbox = (CheckboxMenuItem) obj;
+            if ("setBlindfolded".equals(cbox.getActionCommand())) {
+                CommonData.setBlindfolded(cbox.getState());
+            }
+        }
+    }
 
 }

@@ -16,15 +16,18 @@ public class CubeTimer {
     private long    startTime;
     private long    endTime;
     private boolean plus2;
+    private boolean blindfolded;
 
     public CubeTimer() {
-        state = State.NOT_STARTED;
-        plus2 = false;
+        reset();
     }
 
-    public void startInspection() {
-        startTime = System.currentTimeMillis();
-        state = State.INSPECTING;
+    public void startInspection(boolean blindfolded) {
+        if (state == State.NOT_STARTED) {
+            startTime = System.currentTimeMillis();
+            state = State.INSPECTING;
+            this.blindfolded = blindfolded;
+        }
     }
 
     public void start() {
@@ -32,7 +35,9 @@ public class CubeTimer {
             getState();
         }
         if (state == State.INSPECTING || state == State.NOT_STARTED) {
-            startTime = System.currentTimeMillis();
+            if (state == State.INSPECTING && !blindfolded) {
+                startTime = System.currentTimeMillis();
+            }
             state = State.RUNNING;
         }
     }
@@ -42,6 +47,12 @@ public class CubeTimer {
             endTime = System.currentTimeMillis();
             state = State.STOPPED;
         }
+    }
+
+    public void reset() {
+        state = State.NOT_STARTED;
+        plus2 = false;
+        blindfolded = false;
     }
 
     public void setDNF() {
@@ -72,12 +83,11 @@ public class CubeTimer {
     }
 
     public State getState() {
-        if (state == State.INSPECTING) {
+        if (state == State.INSPECTING && !blindfolded) {
             long now = (System.currentTimeMillis() - startTime) / SECOND_IN_MILLIS;
             if (now >= INSPECTION_TIME + 2) {
                 this.setDNF();
-            }
-            if (now >= INSPECTION_TIME) {
+            } else if (now >= INSPECTION_TIME) {
                 this.setPlus2();
             }
         }
@@ -85,7 +95,7 @@ public class CubeTimer {
     }
 
     private String formatTime(long timeInMillis) {
-        if (state == State.INSPECTING) {
+        if (state == State.INSPECTING && !blindfolded) {
             long now = timeInMillis / SECOND_IN_MILLIS;
             if (now >= INSPECTION_TIME + 2) {
                 this.setDNF();

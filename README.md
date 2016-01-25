@@ -6,6 +6,8 @@ As of now, only NxNxN cubes (to be accurate, *2x2x2* up to *27x27x27*) are suppo
 
 A timer has been added which runs as the WCA regulation. You have 15 seconds to inspect the cube after scrambling, and after that you would get a `+2` penalty. If the timer goes over 17 seoconds, you would get a `DNF`. 
 
+You can choose to do speed solving or blindfolded solving in the menu.
+
 How to run it
 -------------
 There are several ways to run this game.
@@ -25,11 +27,11 @@ There are several ways to run this game.
 
 Key Map
 -------
-The key map is almost the same as the default of [hi-games.net][], as in the list and table below.
+The key map is almost the same as the default of [hi-games.net][], as in the list and table below. _Note that changing cube size has been moved to **menu items** with shortcuts which can still be accessed by keyboard._
 
  - `Esc` -> **Reset** the cube. When solving, give up and get a DNF.
- - `-` -> **Decrease** the cube size.
- - `+` or `=` -> **Increase** the cube size.
+ - <del>`-` -> **Decrease** the cube size.</del>(Moved to Menu, use `Ctrl`/`Command` + `-` instead.)
+ - <del>`+` or `=` -> **Increase** the cube size.</del>(Moved to Menu, use `Ctrl`/`Command` + `=` instead.)
  - `Space` -> **Scramble** the cube when it's not scrambled, and **reset shifts** when solving.
 
 |All|Of|The|Keys|That|Are|Used|In|The|Simulator|
@@ -39,6 +41,11 @@ The key map is almost the same as the default of [hi-games.net][], as in the lis
 |a(**y'**)|s(**D**)|d(**L**)|f(**U'**)|g(**F'**)|h(**F**)|j(**U**)|k(**R'**)|l(**D'**)|;(**y**)|
 |z|x(**Dw**)|c(**Uw'**)|v(**Lw**)|b(**x'**)|n(**x'**)|m(**Rw'**)|,(**Uw**)|.(**Dw'**)|/|
 
+### Menu Shortcuts
+ - `Ctrl`/`Command` + `B` -> toggle blindfolded mode.
+ - `Ctrl`/`Command` + N (N from 2 to 9) -> switch to NxNxN
+ - `Ctrl`/`Command` + `-`/`=` -> decrease/increase cube size
+
 Known Issues
 ------------
 
@@ -47,7 +54,7 @@ Known Issues
 To Do List
 ----------
  - [x] Timer
- - [ ] Menu and settings
+ - [x] Menu and settings
  - [ ] NxMxP Cuboid
  - [ ] Megaminx
  - [ ] Pyraminx

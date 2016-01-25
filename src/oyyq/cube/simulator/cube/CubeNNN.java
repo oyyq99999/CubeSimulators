@@ -82,6 +82,21 @@ public class CubeNNN {
         scrambled = true;
     }
 
+    public static String getName(int size) {
+        switch (size) {
+            case 2:
+                return "Pocket Cube";
+            case 3:
+                return "Rubik's Cube";
+            case 4:
+                return "Rubik's Revenge";
+            case 5:
+                return "Professor's Cube";
+            default:
+                return size + "x" + size + "x" + size + " Cube";
+        }
+    }
+
     private void applyMoveSequence(String sequence) {
         String[] moves = sequence.split("\\s+");
         Pattern p = Pattern.compile("(\\d*)([URFDLB])(w?)[2']?");

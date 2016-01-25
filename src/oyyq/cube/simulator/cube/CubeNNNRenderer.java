@@ -4,6 +4,9 @@ import static com.jogamp.opengl.GL2.*;
 import static oyyq.cube.simulator.cube.CubeNNN.*;
 
 import java.awt.Font;
+import java.awt.FontFormatException;
+import java.io.File;
+import java.io.IOException;
 
 import com.jogamp.opengl.GL2;
 import com.jogamp.opengl.GLAutoDrawable;
@@ -12,7 +15,8 @@ import com.jogamp.opengl.glu.GLU;
 import com.jogamp.opengl.util.awt.TextRenderer;
 
 import oyyq.cube.simulator.cube.CubeNNN.Cubie;
-import oyyq.cube.util.CubeTimer;
+import oyyq.cube.simulator.model.CommonData;
+import oyyq.cube.util.CubeTimer.State;
 
 public class CubeNNNRenderer implements GLEventListener {
 
@@ -33,7 +37,6 @@ public class CubeNNNRenderer implements GLEventListener {
 
     private GLU                glu          = new GLU();
     CubeNNN                    cube;
-    private int                cubeSize;
     private int[]              columnAnglesX;
     private int[]              rowAnglesY;
     private int[]              faceAnglesZ;
@@ -41,8 +44,7 @@ public class CubeNNNRenderer implements GLEventListener {
     private int[]              angleYGoals;
     private int[]              angleZGoals;
     private float[][]          colors       = {{1, 1, 1, 1}, {1, 0, 0, 1}, {0, 1, 0, 1},
-            {1, 1, 0, 1}, {1, 0.5f, 0, 1}, {0, 0, 1, 1}, {0, 0, 0, 0}};
-    CubeTimer                  timer;
+            {1, 1, 0, 1}, {1, 0.5f, 0, 1}, {0, 0, 1, 1}, {0.7f, 0.7f, 0.7f, 1}};
     private TextRenderer       tr;
     SolvingState               state        = SolvingState.INITIALIZED;
 
@@ -51,7 +53,6 @@ public class CubeNNNRenderer implements GLEventListener {
     }
 
     void setCubeSize(int size) {
-        this.cubeSize = size;
         cube = new CubeNNN(size);
         columnAnglesX = new int[size];
         rowAnglesY = new int[size];
@@ -59,11 +60,7 @@ public class CubeNNNRenderer implements GLEventListener {
         angleXGoals = new int[size];
         angleYGoals = new int[size];
         angleZGoals = new int[size];
-        timer = new CubeTimer();
-    }
-
-    int getCubeSize() {
-        return cubeSize;
+        CommonData.setCubeSize(size);
     }
 
     @Override
@@ -73,7 +70,12 @@ public class CubeNNNRenderer implements GLEventListener {
         gl.glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
         gl.glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
         gl.glShadeModel(GL_SMOOTH);
-        tr = new TextRenderer(new Font("SansSerif", Font.BOLD, 60));
+        Font f = new Font(Font.SANS_SERIF, Font.BOLD, 60);
+        try {
+            f = Font.createFont(Font.TRUETYPE_FONT, new File("font/Digiface.ttf"));
+            f = f.deriveFont(Font.BOLD, 60);
+        } catch (FontFormatException | IOException e) {}
+        tr = new TextRenderer(f);
     }
 
     @Override
@@ -85,9 +87,10 @@ public class CubeNNNRenderer implements GLEventListener {
         gl.glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         gl.glMatrixMode(GL_MODELVIEW);
         gl.glLoadIdentity();
+        int cubeSize = CommonData.getCubeSize();
         glu.gluLookAt(0, cubeSize * 4, cubeSize * 4, 0, 0, 0, 0, 1, 0);
         if (cube.isSolvedByUser()) {
-            timer.stop();
+            CommonData.stopTimer();
             state = SolvingState.SOLVED;
         }
         drawText(drawable);
@@ -98,7 +101,7 @@ public class CubeNNNRenderer implements GLEventListener {
     private void drawText(GLAutoDrawable drawable) {
         int width = drawable.getSurfaceWidth();
         int height = drawable.getSurfaceHeight();
-        String text = (cube.isSolvedByUser() ? "Solve Time: " : "") + timer.getTime();
+        String text = CommonData.getTime();
         tr.beginRendering(width, height);
         tr.setColor(0, 1, 0, 1);
         tr.draw(text, (int) ((width - tr.getBounds(text).getWidth()) / 2), height * 8 / 9);
@@ -106,6 +109,7 @@ public class CubeNNNRenderer implements GLEventListener {
     }
 
     private void updateAngles() {
+        int cubeSize = CommonData.getCubeSize();
         for (int i = 0; i < cubeSize; i++) {
             if (columnAnglesX[i] != angleXGoals[i]) {
                 if (columnAnglesX[i] < angleXGoals[i]) {
@@ -173,7 +177,7 @@ public class CubeNNNRenderer implements GLEventListener {
     }
 
     private void drawCube(GL2 gl) {
-
+        int cubeSize = CommonData.getCubeSize();
         float t = (float) ((cubeSize - 1) / 2.0);
         for (int x = 0; x < cubeSize; x++) {
             for (int y = 0; y < cubeSize; y++) {
@@ -197,13 +201,16 @@ public class CubeNNNRenderer implements GLEventListener {
         int visibility = cubie.getVisibility();
         for (int i = 0; i < 6; i++) {
             int color = cubie.getColor(i);
+            if (CommonData.isBlindfolded() && CommonData.getTimerState() == State.RUNNING) {
+                color = 6;
+            }
             if ((visibility & (1 << i)) != 0) {
-                if (color < 6) {
-                    gl.glColor4f(colors[color][0], colors[color][1], colors[color][2],
-                            colors[color][3]);
-                } else {
-                    gl.glColor4f(0, 0, 0, 1);
-                }
+                // if (color <= 6) {
+                gl.glColor4f(colors[color][0], colors[color][1], colors[color][2],
+                        colors[color][3]);
+                // } else {
+                // gl.glColor4f(0, 0, 0, 1);
+                // }
                 switch (i) {
                     case U:
                         gl.glBegin(GL_QUADS);
@@ -318,6 +325,7 @@ public class CubeNNNRenderer implements GLEventListener {
     }
 
     int getAnimatingAxis() {
+        int cubeSize = CommonData.getCubeSize();
         for (int i = 0; i < cubeSize; i++) {
             if (angleXGoals[i] != 0) {
                 return X;
