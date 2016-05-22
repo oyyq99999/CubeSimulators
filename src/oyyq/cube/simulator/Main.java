@@ -47,7 +47,7 @@ public class Main extends Frame implements CommonDataListener {
         profile = GLProfile.get(GLProfile.GL2);
         capab = new GLCapabilities(profile);
         canvas = new GLCanvas(capab);
-        canvas.setSize(960, 600);
+        canvas.setSize(500, 500);
 
         renderer = new CubeNNNRenderer(3);
         canvas.addGLEventListener(renderer);

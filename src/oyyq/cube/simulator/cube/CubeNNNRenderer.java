@@ -67,9 +67,9 @@ public class CubeNNNRenderer implements GLEventListener {
     public void init(GLAutoDrawable drawable) {
         final GL2 gl = drawable.getGL().getGL2();
         gl.glEnable(GL_DEPTH_TEST);
-        gl.glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
-        gl.glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
-        gl.glShadeModel(GL_SMOOTH);
+//        gl.glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
+//        gl.glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
+//        gl.glShadeModel(GL_SMOOTH);
         Font f = new Font(Font.SANS_SERIF, Font.BOLD, 60);
         try {
             f = Font.createFont(Font.TRUETYPE_FONT, new File("font/Digiface.ttf"));
@@ -199,18 +199,15 @@ public class CubeNNNRenderer implements GLEventListener {
 
     private void drawCubie(GL2 gl, Cubie cubie) {
         int visibility = cubie.getVisibility();
+        gl.glLineWidth(5.0f);
         for (int i = 0; i < 6; i++) {
             int color = cubie.getColor(i);
             if (CommonData.isBlindfolded() && CommonData.getTimerState() == State.RUNNING) {
                 color = 6;
             }
             if ((visibility & (1 << i)) != 0) {
-                // if (color <= 6) {
                 gl.glColor4f(colors[color][0], colors[color][1], colors[color][2],
                         colors[color][3]);
-                // } else {
-                // gl.glColor4f(0, 0, 0, 1);
-                // }
                 switch (i) {
                     case U:
                         gl.glBegin(GL_QUADS);
@@ -305,6 +302,7 @@ public class CubeNNNRenderer implements GLEventListener {
                 }
             }
         }
+        gl.glLineWidth(1.0f);
     }
 
     @Override

@@ -1,9 +1,11 @@
 package oyyq.cube.util;
 
+import java.util.Arrays;
 import java.util.Random;
 
-import oyyq.cube.cubical.Cube222;
-import oyyq.cube.cubical.Cube333;
+import oyyq.cube.cubical.cube222.Cube222;
+import oyyq.cube.cubical.cube333.CubieCube;
+import oyyq.cube.cubical.cube333.TwoPhaseSolver;
 import oyyq.cube.simulator.cube.CubeNNN;
 
 public class CubeNNNScrambler {
@@ -22,34 +24,46 @@ public class CubeNNNScrambler {
             return generator;
         }
         if (size == 3) {
-            return Cube333.randomCube().generate(21);
+            return new TwoPhaseSolver(CubieCube.randomCube()).generate(21);
         }
         StringBuilder sb = new StringBuilder();
         Random r = new Random();
         int scrambleLength = (size - 2) * 20;
         int count = 0;
+        int lastAxis = -1;
+        boolean[][] turned = new boolean[3][size - 1];
         while (count < scrambleLength) {
-            for (int axis = 0; axis < 6 && count < scrambleLength; axis++) {
-                for (int shift = 1; shift <= (size >> 1) - axis / 3 * ((size + 1) & 1)
-                        && count < scrambleLength; shift++) {
-                    int turns = r.nextInt(4);
-                    if (turns == 0) {
-                        continue;
-                    }
-                    if (shift > 2) {
-                        sb.append(shift);
-                    }
-                    sb.append("URFDLB".charAt(axis));
-                    if (shift >= 2) {
-                        sb.append("w");
-                    }
-                    sb.append(" 2'".charAt(turns - 1));
-                    if (turns > 1) {
-                        sb.append(" ");
-                    }
-                    count++;
+            int axis = r.nextInt(3);
+            int shift = r.nextInt(size - 1);
+            if (axis != lastAxis) {
+                if (lastAxis != -1) {
+                    Arrays.fill(turned[lastAxis], false);
+                }
+            } else {
+                if (turned[axis][shift]) {
+                    continue;
                 }
             }
+            int turns = r.nextInt(3);
+            turned[axis][shift] = true;
+            lastAxis = axis;
+            if (shift >= size >> 1) {
+                axis += 3;
+                shift -= size >> 1;
+            }
+            shift++;
+            if (shift > 2) {
+                sb.append(shift);
+            }
+            sb.append("URFDLB".charAt(axis));
+            if (shift >= 2) {
+                sb.append("w");
+            }
+            sb.append(" 2'".charAt(turns));
+            if (turns > 0) {
+                sb.append(" ");
+            }
+            count++;
         }
         return sb.toString().trim();
     }

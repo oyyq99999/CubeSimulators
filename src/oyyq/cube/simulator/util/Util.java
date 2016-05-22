@@ -2,8 +2,10 @@ package oyyq.cube.simulator.util;
 
 public final class Util {
 
-    private Util() {}
-    
+    private Util() {
+        throw new UnsupportedOperationException("This class can not be instantialized!");
+    }
+
     public static void rotate(int[] arr, int... indices) {
         int tmp = arr[indices[0]];
         for (int i = 0, len = indices.length; i < len - 1; i++) {
